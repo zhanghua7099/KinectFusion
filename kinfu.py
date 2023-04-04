@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = torch.device("cpu")
-    dataset = TUMDataset(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25)
+    dataset = TUMDataset(os.path.join(args.data_root), device, near=args.near, far=args.far, img_scale=0.25, depth_scale= args.depth_scale)
     H, W = dataset.H, dataset.W
 
     vol_dims, vol_origin, voxel_size = get_volume_setting(args)

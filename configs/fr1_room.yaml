@@ -8,3 +8,4 @@ n_pyramids: 4
 n_iters: [10, 3, 3, 3]
 dampings: [1.0e-4, 1.0e-4, 1.0e-2, 1.0e-2]
 n_steps: 256
+depth_scale: 5000

@@ -51,6 +51,7 @@ class TUMDataset(torch.utils.data.Dataset):
             img_scale: float = 1.,  # image scale factor
             start: int = -1,
             end: int = -1,
+            depth_scale: int = 1000    # for tum dataset, it is 5000
     ):
         super().__init__()
         assert path.isdir(rootdir), f"'{rootdir}' is not a directory"
@@ -64,6 +65,9 @@ class TUMDataset(torch.utils.data.Dataset):
         data_path = path.join(rootdir, "processed")
         cam_file = path.join(data_path, "cameras.npz")
         print("LOAD DATA", data_path)
+
+        # set the max depth
+        depth_max = 3
 
         # world_mats, normalize_mat
         cam_dict = np.load(cam_file)
@@ -85,14 +89,21 @@ class TUMDataset(torch.utils.data.Dataset):
             # read images
             rgb = np.array(imageio.imread(path.join(data_path, "rgb/{:04d}.png".format(i)))).astype(np.float32)
             depth = np.array(imageio.imread(path.join(data_path, "depth/{:04d}.png".format(i)))).astype(np.float32)
-            depth /= 1000.  # TODO: put depth factor to args
+            depth /= depth_scale  # TODO: put depth factor to args
+            
+            # remove the max value (m)
+            depth = np.where(depth < depth_max, depth, 0)
+            
             d_max += [depth.max()]
             d_min += [depth.min()]
             # depth = cv2.bilateralFilter(depth, 5, 0.2, 15)
             # print(depth[depth > 0.].min())
+            
+            # (zhy): remove the depth value $d that is (d > far) or (d < near)
             invalid = (depth < near) | (depth > far)
             depth[invalid] = -1.
-            # downscale the image size if needed
+
+            # downscale the image size if needed (Limitted to GPU Memory)
             if img_scale < 1.0:
                 full_size = list(rgb.shape[:2])
                 rsz_h, rsz_w = [round(hw * img_scale) for hw in full_size]
@@ -135,6 +146,7 @@ class TUMDatasetOnline(torch.utils.data.Dataset):
             img_scale: float = 1.,  # image scale factor
             start: int = -1,
             end: int = -1,
+            depth_scale: int = 1000    # for tum dataset, it is 5000
     ):
         super().__init__()
         assert path.isdir(rootdir), f"'{rootdir}' is not a directory"
@@ -146,6 +158,7 @@ class TUMDatasetOnline(torch.utils.data.Dataset):
         self.K_all = []
         self.rgb_files_all = []
         self.depth_files_all = []
+        self.depth_scale = depth_scale
 
         # root should be tum_sequence
         data_path = path.join(rootdir, "processed")
@@ -186,7 +199,7 @@ class TUMDatasetOnline(torch.utils.data.Dataset):
         # read images
         rgb = np.array(imageio.imread(self.rgb_files_all[idx])).astype(np.float32)
         depth = np.array(imageio.imread(self.depth_files_all[idx])).astype(np.float32)
-        depth /= 1000.
+        depth /= self.depth_scale
         # depth = cv2.bilateralFilter(depth, 5, 0.2, 15)
         depth[depth < self.near] = 0.
         depth[depth > self.far] = -1.
