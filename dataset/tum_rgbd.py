@@ -11,7 +11,8 @@ def get_calib():
     return {
         "fr1": [517.306408, 516.469215, 318.643040, 255.313989],
         "fr2": [520.908620, 521.007327, 325.141442, 249.701764],
-        "fr3": [535.4, 539.2, 320.1, 247.6]
+        "fr3": [535.4, 539.2, 320.1, 247.6], 
+        "azurekinect":[608.6896362304688, 608.6896362304688, 640.839599609375, 369.6243591308594]
     }
 
 
@@ -84,7 +85,7 @@ class TUMDataset(torch.utils.data.Dataset):
             # read images
             rgb = np.array(imageio.imread(path.join(data_path, "rgb/{:04d}.png".format(i)))).astype(np.float32)
             depth = np.array(imageio.imread(path.join(data_path, "depth/{:04d}.png".format(i)))).astype(np.float32)
-            depth /= 5000.  # TODO: put depth factor to args
+            depth /= 1000.  # TODO: put depth factor to args
             d_max += [depth.max()]
             d_min += [depth.min()]
             # depth = cv2.bilateralFilter(depth, 5, 0.2, 15)
@@ -185,7 +186,7 @@ class TUMDatasetOnline(torch.utils.data.Dataset):
         # read images
         rgb = np.array(imageio.imread(self.rgb_files_all[idx])).astype(np.float32)
         depth = np.array(imageio.imread(self.depth_files_all[idx])).astype(np.float32)
-        depth /= 5000.
+        depth /= 1000.
         # depth = cv2.bilateralFilter(depth, 5, 0.2, 15)
         depth[depth < self.near] = 0.
         depth[depth > self.far] = -1.
