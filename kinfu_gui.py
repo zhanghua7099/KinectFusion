@@ -8,6 +8,7 @@ from fusion import TSDFVolumeTorch
 from dataset.tum_rgbd import TUMDataset
 from tracker import ICPTracker
 from utils import load_config, get_volume_setting, get_time
+from scipy.spatial.transform import Rotation as R
 
 
 vis_param = argparse.Namespace()
@@ -29,7 +30,7 @@ def refresh(vis):
     color0, depth0, pose_gt, K = sample  # use live image as template image (0)
     # depth0[depth0 <= 0.5] = 0.
     if vis_param.frame_id == 0:
-        vis_param.curr_pose = pose_gt
+        vis_param.curr_pose = torch.tensor([[1.,0.,0.,0.], [0.,1.,0.,0.], [0.,0.,1.,0.], [0.,0.,0.,1.]], device=device)
     else:
         # render depth image (1) from tsdf volume
         depth1, color1, vertex01, normal1, mask1 = \
@@ -53,6 +54,7 @@ def refresh(vis):
     if vis_param.current_camera is not None:
         vis.remove_geometry(vis_param.current_camera, reset_bounding_box=False)
     vis.add_geometry(camera, reset_bounding_box=False)
+    
     vis_param.current_camera = camera
 
     vis_param.frame_id += 1
@@ -128,6 +130,7 @@ if __name__ == "__main__":
     # visualize
     vis = o3d.visualization.VisualizerWithKeyCallback()
     vis.create_window(width=1280, height=960)
+
     # vis.get_view_control().unset_constant_z_near()
     # vis.get_view_control().unset_constant_z_far()
     vis.get_render_option().mesh_show_back_face = True
@@ -135,6 +138,7 @@ if __name__ == "__main__":
     coord_axes = o3d.geometry.TriangleMesh.create_coordinate_frame()
     vis.add_geometry(coord_axes)
     vis.remove_geometry(coord_axes, reset_bounding_box=False)
+    # vis.add_geometry(o3d.geometry.TriangleMesh.create_coordinate_frame())
     # set initial view-point
     c2w0 = dataset[0][2]
     follow_camera(vis, c2w0.cpu().numpy())

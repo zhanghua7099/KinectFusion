@@ -66,8 +66,8 @@ class TUMDataset(torch.utils.data.Dataset):
         cam_file = path.join(data_path, "cameras.npz")
         print("LOAD DATA", data_path)
 
-        # set the max depth
-        depth_max = 3
+        # set the max depth value (by setting others 0)
+        depth_max = 3    # (m)
 
         # world_mats, normalize_mat
         cam_dict = np.load(cam_file)
