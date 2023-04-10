@@ -31,10 +31,6 @@ if __name__ == "__main__":
     t, poses, poses_gt = list(), list(), list()
     curr_pose, depth1, color1 = None, None, None
 
-    # save all the T10 for debug
-    T10_results = list()
-    T10 = None
-
     for i in range(0, len(dataset), 1):
         t0 = get_time()
         sample = dataset[i]
@@ -42,9 +38,9 @@ if __name__ == "__main__":
         # depth0[depth0 <= 0.5] = 0.
 
         if i == 0:  # initialize
-            # make the first pose (estimated) equal to the gt
+            # make the first pose (estimated) equal to the camera frame
             curr_pose = torch.tensor([[1.,0.,0.,0.], [0.,1.,0.,0.], [0.,0.,1.,0.], [0.,0.,0.,1.]], device=device)
-            T10 = curr_pose
+
         else:  # tracking
             # 1. render depth image (1) from tsdf volume
             depth1, color1, vertex01, normal1, mask1 = tsdf_volume.render_model(curr_pose, K, H, W, near=args.near, far=args.far, n_samples=args.n_steps)
@@ -69,34 +65,6 @@ if __name__ == "__main__":
     # get the pose list output by KinectFusion
     poses = np.stack(poses, 0)
 
-    # get the time stamp (suppose the same as depth image)
-    assoc_info = np.loadtxt("{}/associations.txt".format(args.data_root), dtype=str)
-    depth_timestamp_list = assoc_info.T[2]
-
-    # # convert to TUM traj
-    pose_txt = []
-
-    for i in range(len(poses)):
-        # get the pose
-        T_pose = poses[i]
-
-        # get the time stamp
-        timestamp = float(depth_timestamp_list[i])
-        
-        # get the quat
-        rotation = R.from_matrix(T_pose[:3,:3])
-        quat = list(rotation.as_quat())
-        # get the translation vector
-        translation = list(T_pose[:3,3])
-
-        # generate pose list (tum format)
-        pose_tum = [timestamp] + translation + quat
-
-        pose_txt.append(pose_tum)
-
-    # for saving the pose
-    np.savetxt("test.txt", pose_txt, fmt='%.06f')
-
     # save results
     if args.save_dir is not None:
         if not os.path.exists(args.save_dir):
@@ -106,3 +74,29 @@ if __name__ == "__main__":
         verts, faces, norms, colors = tsdf_volume.get_mesh()
         partial_tsdf = trimesh.Trimesh(vertices=verts, faces=faces, vertex_normals=norms, vertex_colors=colors)
         partial_tsdf.export(os.path.join(args.save_dir, "mesh.ply"))
+
+        # save the traj (TUM format)
+        # get the time stamp (suppose the same as associations)
+        assoc_info = np.loadtxt("{}/associations.txt".format(args.data_root), dtype=str)
+        depth_timestamp_list = assoc_info.T[2]    # get the depth timestamp
+
+        pose_txt = []
+        for i in range(len(poses)):
+            # get the pose
+            T_pose = poses[i]
+
+            # get the time stamp
+            timestamp = float(depth_timestamp_list[i])
+            
+            # get the quat
+            rotation = R.from_matrix(T_pose[:3,:3])
+            quat = list(rotation.as_quat())
+            # get the translation vector
+            translation = list(T_pose[:3,3])
+
+            # generate pose list (tum format)
+            pose_tum = [timestamp] + translation + quat
+            pose_txt.append(pose_tum)
+
+        # for saving the pose
+        np.savetxt(os.path.join(args.save_dir, "kinfu_traj.txt"), pose_txt, fmt='%.06f')
